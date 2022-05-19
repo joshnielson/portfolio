@@ -1,2 +1,2 @@
 # Portfolio
-Collection of schoolwork and personal projects exploring machine learning.
+Collection of schoolwork from my Master's in Data Analytics and personal projects exploring machine learning.
