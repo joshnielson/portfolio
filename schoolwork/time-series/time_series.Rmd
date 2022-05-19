@@ -1,0 +1,108 @@
+---
+output: rmarkdown::github_document
+---
+```{r, warning=FALSE, message=FALSE}
+# Import libraries
+library(tidyverse)
+library(janitor)
+library(astsa)
+library(aTSA)
+library(forecast)
+library(MLmetrics)
+```
+
+```{r, message=FALSE}
+# Read in data file
+df <- read_csv(file="C:/Users/Josh/Data/School/time-series/data/teleco_time_series.csv")
+df <- clean_names(df)
+
+# Convert data to time series
+df_ts <- ts(df$revenue, frequency = 365, start = 2020)
+```
+
+```{r}
+# Plot the revenue
+ts.plot(df_ts, xlab = "Year", ylab = "Revenue (Million USD)")
+```
+
+```{r}
+# Perform Augmented Dickey-Fuller test
+adf.test(df_ts)
+```
+
+```{r}
+# Apply differencing to the data
+df_diff <- diff(df_ts)
+
+# And plot it
+ts.plot(df_diff,  xlab = "Year", ylab = "Revenue (Million USD)")
+```
+
+```{r}
+# Recheck the Augmented Dickey-Fuller test
+adf.test(df_diff)
+```
+
+```{r}
+# Create train/test splits
+df_train <- head(df_ts, round(length(df_diff)*.75))
+df_test <- tail(df_ts, round(length(df_diff)*.25))
+```
+
+```{r}
+# And write them to new files
+write.csv(df_train, "C:/Users/Josh/Data/School/time-series/data/teleco_train.csv")
+write.csv(df_test, "C:/Users/Josh/Data/School/time-series/data/teleco_test.csv")
+```
+
+```{r}
+# Decompose the time series data into components
+df_comps <- decompose(df_ts)
+plot(df_comps, xlab = "Year")
+```
+
+```{r}
+# Plot periodogram
+spectrum(df_ts)
+```
+
+```{r}
+# Plot smoothed periodogram
+kern <- kernel("daniell", 1)
+mvspec(df_ts, kern, log = "n")
+```
+
+```{r}
+# Plot ACF
+acf(df_diff)
+```
+
+```{r}
+# Plot PACF
+pacf(df_diff)
+```
+
+```{r}
+# Finding best model parameters
+auto.arima(df_train, trace=TRUE)
+```
+
+```{r}
+# Building the model
+model <- sarima(df_train, p=1, d=1, q=0)
+model
+```
+
+```{r}
+# Plotting prediction vs. actual
+df_pred <- sarima.for(df_train, n.ahead=183, p=1, d=1, q=0, plot.all=TRUE)
+abline(v = ts(c(548)), col = "brown", lty = 2)
+points(df_test, type = "l", col = "blue" , lty = 2)
+title(main="Daily Revenue - Prediction Vs Actual")
+```
+
+```{r}
+# Forecasting and accuracy
+forecast <- forecast(df_train, model=auto.arima(df_train), h=length(df_test))
+accuracy(forecast, df_test)
+```
